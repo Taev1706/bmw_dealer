@@ -1,0 +1,16 @@
+export 'src/cli/input_helper.dart';
+export 'src/cli/menu.dart';
+export 'src/data/database.dart';
+export 'src/data/repositories/client_repository.dart';
+export 'src/data/repositories/car_repository.dart';
+export 'src/data/repositories/manager_repository.dart';
+export 'src/data/repositories/order_repository.dart';
+export 'src/data/repositories/test_drive_repository.dart';
+export 'src/domain/models/client.dart';
+export 'src/domain/models/car.dart';
+export 'src/domain/models/manager.dart';
+export 'src/domain/models/order.dart';
+export 'src/domain/models/test_drive.dart';
+export 'src/domain/models/identity.dart';
+export 'src/domain/validators/text_validator.dart';
+export 'src/domain/validators/number_validator.dart';

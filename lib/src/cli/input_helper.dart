@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import '../domain/validators/text_validator.dart';
@@ -6,7 +7,7 @@ import '../domain/validators/number_validator.dart';
 String readText(String label) {
   while (true) {
     stdout.write(label);
-    final value = stdin.readLineSync()?.trim() ?? '';
+    final value = stdin.readLineSync(encoding: utf8)?.trim() ?? '';
     final error = validateText(value);
     if (error == null) return value;
     stdout.writeln('Ошибка: $error');
@@ -16,7 +17,7 @@ String readText(String label) {
 double readPositiveDouble(String label) {
   while (true) {
     stdout.write(label);
-    final value = stdin.readLineSync()?.trim() ?? '';
+    final value = stdin.readLineSync(encoding: utf8)?.trim() ?? '';
     final error = validatePositiveNumber(value);
     if (error == null) return double.parse(value.replaceAll(',', '.'));
     stdout.writeln('Ошибка: $error');
@@ -26,7 +27,7 @@ double readPositiveDouble(String label) {
 int readPositiveInt(String label) {
   while (true) {
     stdout.write(label);
-    final value = stdin.readLineSync()?.trim() ?? '';
+    final value = stdin.readLineSync(encoding: utf8)?.trim() ?? '';
     final number = int.tryParse(value);
     if (number != null && number > 0) return number;
     stdout.writeln('Ошибка: введите целое число больше 0');
@@ -36,7 +37,7 @@ int readPositiveInt(String label) {
 DateTime readDateTime(String label) {
   while (true) {
     stdout.write(label);
-    final value = stdin.readLineSync()?.trim() ?? '';
+    final value = stdin.readLineSync(encoding: utf8)?.trim() ?? '';
     try {
       return DateTime.parse(value);
     } catch (_) {
@@ -47,5 +48,5 @@ DateTime readDateTime(String label) {
 
 String readRaw(String label) {
   stdout.write(label);
-  return stdin.readLineSync()?.trim() ?? '';
+  return stdin.readLineSync(encoding: utf8)?.trim() ?? '';
 }

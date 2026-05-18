@@ -7,6 +7,7 @@ class BmwDatabase {
   final Database _sqlite;
 
   BmwDatabase(String filePath) : _sqlite = sqlite3.open(filePath) {
+    _sqlite.execute('PRAGMA foreign_keys = ON;');
     _createTables();
   }
 

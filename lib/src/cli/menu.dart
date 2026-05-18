@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import '../data/database.dart';
@@ -14,6 +15,7 @@ import '../domain/models/order.dart';
 import 'input_helper.dart';
 
 void runMenu(BmwDatabase db) {
+  stdout.encoding = utf8;
   final clients = ClientRepository(db);
   final cars = CarRepository(db);
   final managers = ManagerRepository(db);

@@ -12,10 +12,15 @@ import '../domain/models/car.dart';
 import '../domain/models/manager.dart';
 import '../domain/models/test_drive.dart';
 import '../domain/models/order.dart';
+import '../logger/app_logger.dart';
+import '../reports/async_report.dart';
 import 'input_helper.dart';
 
-void runMenu(BmwDatabase db) {
+Future<void> runMenuAsync(BmwDatabase db) async {
   stdout.encoding = utf8;
+  final log = AppLogger();
+  log.start('Приложение запущено');
+
   final clients = ClientRepository(db);
   final cars = CarRepository(db);
   final managers = ManagerRepository(db);
@@ -49,75 +54,107 @@ void runMenu(BmwDatabase db) {
 18 — удалить заказ
 
 19 — показать всё из БД
+20 — асинхронный отчёт
  0 — выход
 Выберите пункт:''');
 
     final choice = stdin.readLineSync()?.trim() ?? '';
     switch (choice) {
       case '1':
+        log.read('Запрос списка клиентов');
         _printClients(clients);
-        break;
       case '2':
-        _addClient(clients);
-        break;
+        _addClient(clients, log);
       case '3':
-        _updateClient(clients);
-        break;
+        _updateClient(clients, log);
       case '4':
-        _deleteClient(clients);
-        break;
+        _deleteClient(clients, log);
       case '5':
+        log.read('Запрос списка автомобилей');
         _printCars(cars);
-        break;
       case '6':
-        _addCar(cars);
-        break;
+        _addCar(cars, log);
       case '7':
-        _updateCar(cars);
-        break;
+        _updateCar(cars, log);
       case '8':
-        _deleteCar(cars);
-        break;
+        _deleteCar(cars, log);
       case '9':
+        log.read('Запрос списка менеджеров');
         _printManagers(managers);
-        break;
       case '10':
-        _addManager(managers);
-        break;
+        _addManager(managers, log);
       case '11':
-        _updateManager(managers);
-        break;
+        _updateManager(managers, log);
       case '12':
-        _deleteManager(managers);
-        break;
+        _deleteManager(managers, log);
       case '13':
+        log.read('Запрос списка тест-драйвов');
         _printTestDrives(testDrives);
-        break;
       case '14':
-        _addTestDrive(testDrives, clients, cars, managers);
-        break;
+        _addTestDrive(testDrives, clients, cars, managers, log);
       case '15':
-        _deleteTestDrive(testDrives);
-        break;
+        _deleteTestDrive(testDrives, log);
       case '16':
+        log.read('Запрос списка заказов');
         _printOrders(orders);
-        break;
       case '17':
-        _addOrder(orders, clients, cars, managers);
-        break;
+        _addOrder(orders, clients, cars, managers, log);
       case '18':
-        _deleteOrder(orders);
-        break;
+        _deleteOrder(orders, log);
       case '19':
+        log.read('Запрос всех данных из БД');
         _printAll(clients, cars, managers, testDrives, orders);
-        break;
+      case '20':
+        await _runAsyncReport(log);
       case '0':
+        log.exit_('Приложение завершено');
         stdout.writeln('До свидания.');
         return;
       default:
+        log.error('Неизвестная команда: $choice');
         stdout.writeln('Неизвестная команда.');
     }
     stdout.writeln();
+  }
+}
+
+Future<void> _runAsyncReport(AppLogger log) async {
+  stdout.writeln('Отчёт генерируется...');
+  log.report('Запущена генерация асинхронного отчёта');
+
+  try {
+    final r = await generateReportAsync();
+
+    stdout.writeln(' ОТЧЁТ ПО BMW ДИЛЕРСКОМУ ЦЕНТРУ');
+    stdout.writeln('   Клиентов:       ${r.clientCount.toString().padLeft(5)}');
+    stdout.writeln('   Автомобилей:    ${r.carCount.toString().padLeft(5)}');
+    stdout.writeln(
+      '   Менеджеров:     ${r.managerCount.toString().padLeft(5)}',
+    );
+    stdout.writeln(
+      '   Тест-драйвов:   ${r.testDriveCount.toString().padLeft(5)}',
+    );
+    stdout.writeln('   Заказов:        ${r.orderCount.toString().padLeft(5)}');
+    stdout.writeln(
+      '   Выручка:    ${r.totalRevenue.toStringAsFixed(2).padLeft(12)} ₽',
+    );
+    stdout.writeln(
+      '   Средний чек: ${r.avgOrderPrice.toStringAsFixed(2).padLeft(11)} ₽',
+    );
+    if (r.topModel != null) {
+      stdout.writeln('   Топ-модель:  ${r.topModel!.padRight(23)}');
+    }
+    if (r.topManager != null) {
+      stdout.writeln('   Топ-менеджер: ${r.topManager!.padRight(22)}');
+    }
+
+    log.report(
+      'Отчёт готов: клиентов=${r.clientCount}, авто=${r.carCount}, '
+      'заказов=${r.orderCount}, выручка=${r.totalRevenue.toStringAsFixed(2)}',
+    );
+  } catch (e) {
+    stdout.writeln('Ошибка генерации отчёта: $e');
+    log.error('Ошибка асинхронного отчёта: $e');
   }
 }
 
@@ -127,31 +164,32 @@ void _printClients(ClientRepository repo) {
     stdout.writeln('Клиентов нет.');
     return;
   }
-  for (final c in list) {
-    stdout.writeln('id: ${c.id} | ${c.name} | ${c.phone}');
-  }
+  for (final c in list) stdout.writeln('id: ${c.id} | ${c.name} | ${c.phone}');
 }
 
-void _addClient(ClientRepository repo) {
+void _addClient(ClientRepository repo, AppLogger log) {
   final id = readText('id клиента: ');
   final name = readText('имя: ');
   final phone = readText('телефон: ');
   repo.create(Client(id: id, name: name, phone: phone));
   stdout.writeln('Клиент добавлен.');
+  log.add('Добавлен клиент id=$id, имя=$name');
 }
 
-void _updateClient(ClientRepository repo) {
+void _updateClient(ClientRepository repo, AppLogger log) {
   final id = readRaw('id клиента для обновления: ');
   final name = readText('новое имя: ');
   final phone = readText('новый телефон: ');
   repo.update(Client(id: id, name: name, phone: phone));
   stdout.writeln('Клиент обновлён.');
+  log.update('Обновлён клиент id=$id, имя=$name');
 }
 
-void _deleteClient(ClientRepository repo) {
+void _deleteClient(ClientRepository repo, AppLogger log) {
   final id = readRaw('id клиента для удаления: ');
   repo.delete(id);
-  stdout.writeln('Готово (если id был в базе).');
+  stdout.writeln('Готово.');
+  log.delete('Удалён клиент id=$id');
 }
 
 void _printCars(CarRepository repo) {
@@ -160,33 +198,35 @@ void _printCars(CarRepository repo) {
     stdout.writeln('Автомобилей нет.');
     return;
   }
-  for (final c in list) {
+  for (final c in list)
     stdout.writeln('id: ${c.id} | ${c.model} | ${c.year} | ${c.price} ₽');
-  }
 }
 
-void _addCar(CarRepository repo) {
+void _addCar(CarRepository repo, AppLogger log) {
   final id = readText('id автомобиля: ');
   final model = readText('модель (например BMW X5): ');
-  final price = readPositiveDouble('цена (число): ');
+  final price = readPositiveDouble('цена: ');
   final year = readPositiveInt('год выпуска: ');
   repo.create(Car(id: id, model: model, price: price, year: year));
   stdout.writeln('Автомобиль добавлен.');
+  log.add('Добавлен автомобиль id=$id, модель=$model, год=$year, цена=$price');
 }
 
-void _updateCar(CarRepository repo) {
+void _updateCar(CarRepository repo, AppLogger log) {
   final id = readRaw('id автомобиля для обновления: ');
   final model = readText('новая модель: ');
   final price = readPositiveDouble('новая цена: ');
   final year = readPositiveInt('новый год выпуска: ');
   repo.update(Car(id: id, model: model, price: price, year: year));
   stdout.writeln('Автомобиль обновлён.');
+  log.update('Обновлён автомобиль id=$id, модель=$model');
 }
 
-void _deleteCar(CarRepository repo) {
+void _deleteCar(CarRepository repo, AppLogger log) {
   final id = readRaw('id автомобиля для удаления: ');
   repo.delete(id);
-  stdout.writeln('Готово (если id был в базе).');
+  stdout.writeln('Готово.');
+  log.delete('Удалён автомобиль id=$id');
 }
 
 void _printManagers(ManagerRepository repo) {
@@ -195,31 +235,32 @@ void _printManagers(ManagerRepository repo) {
     stdout.writeln('Менеджеров нет.');
     return;
   }
-  for (final m in list) {
-    stdout.writeln('id: ${m.id} | ${m.name} | ${m.phone}');
-  }
+  for (final m in list) stdout.writeln('id: ${m.id} | ${m.name} | ${m.phone}');
 }
 
-void _addManager(ManagerRepository repo) {
+void _addManager(ManagerRepository repo, AppLogger log) {
   final id = readText('id менеджера: ');
   final name = readText('имя: ');
   final phone = readText('телефон: ');
   repo.create(Manager(id: id, name: name, phone: phone));
   stdout.writeln('Менеджер добавлен.');
+  log.add('Добавлен менеджер id=$id, имя=$name');
 }
 
-void _updateManager(ManagerRepository repo) {
+void _updateManager(ManagerRepository repo, AppLogger log) {
   final id = readRaw('id менеджера для обновления: ');
   final name = readText('новое имя: ');
   final phone = readText('новый телефон: ');
   repo.update(Manager(id: id, name: name, phone: phone));
   stdout.writeln('Менеджер обновлён.');
+  log.update('Обновлён менеджер id=$id, имя=$name');
 }
 
-void _deleteManager(ManagerRepository repo) {
+void _deleteManager(ManagerRepository repo, AppLogger log) {
   final id = readRaw('id менеджера для удаления: ');
   repo.delete(id);
-  stdout.writeln('Готово (если id был в базе).');
+  stdout.writeln('Готово.');
+  log.delete('Удалён менеджер id=$id');
 }
 
 void _printTestDrives(TestDriveRepository repo) {
@@ -240,6 +281,7 @@ void _addTestDrive(
   ClientRepository clients,
   CarRepository cars,
   ManagerRepository managers,
+  AppLogger log,
 ) {
   stdout.writeln('Доступные клиенты:');
   _printClients(clients);
@@ -264,12 +306,14 @@ void _addTestDrive(
     ),
   );
   stdout.writeln('Тест-драйв записан.');
+  log.add('Добавлен тест-драйв id=$id, клиент=$clientId, авто=$carId');
 }
 
-void _deleteTestDrive(TestDriveRepository repo) {
+void _deleteTestDrive(TestDriveRepository repo, AppLogger log) {
   final id = readRaw('id тест-драйва для удаления: ');
   repo.delete(id);
-  stdout.writeln('Готово (если id был в базе).');
+  stdout.writeln('Готово.');
+  log.delete('Удалён тест-драйв id=$id');
 }
 
 void _printOrders(OrderRepository repo) {
@@ -290,6 +334,7 @@ void _addOrder(
   ClientRepository clients,
   CarRepository cars,
   ManagerRepository managers,
+  AppLogger log,
 ) {
   stdout.writeln('Доступные клиенты:');
   _printClients(clients);
@@ -314,12 +359,16 @@ void _addOrder(
     ),
   );
   stdout.writeln('Заказ оформлен.');
+  log.add(
+    'Добавлен заказ id=$id, клиент=$clientId, авто=$carId, цена=$totalPrice',
+  );
 }
 
-void _deleteOrder(OrderRepository repo) {
+void _deleteOrder(OrderRepository repo, AppLogger log) {
   final id = readRaw('id заказа для удаления: ');
   repo.delete(id);
-  stdout.writeln('Готово (если id был в базе).');
+  stdout.writeln('Готово.');
+  log.delete('Удалён заказ id=$id');
 }
 
 void _printAll(

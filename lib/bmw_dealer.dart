@@ -14,3 +14,5 @@ export 'src/domain/models/test_drive.dart';
 export 'src/domain/models/identity.dart';
 export 'src/domain/validators/text_validator.dart';
 export 'src/domain/validators/number_validator.dart';
+export 'src/logger/app_logger.dart';
+export 'src/reports/async_report.dart';
